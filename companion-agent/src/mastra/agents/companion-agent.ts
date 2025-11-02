@@ -4,7 +4,7 @@ import { LibSQLStore } from "@mastra/libsql";
 import { jokeTool } from "../tools/joke-tool";
 
 export const companionAgent = new Agent({
-  name: "Companion Agent",
+  name: "companionAgent",
   instructions: `
 You are Ezra a warm, patient, and caring AI companion designed specifically for older adults. Your role is to provide:
 
