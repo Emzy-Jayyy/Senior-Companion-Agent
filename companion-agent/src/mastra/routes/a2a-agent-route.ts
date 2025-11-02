@@ -6,7 +6,12 @@ interface A2ARequestBody {
   id: string | number | null;
   method?: string;
   params?: {
-    message?: string;
+    userId?: string;
+    message?: string | {
+      kind: string;
+      role: string;
+      parts: { kind: string; text: string }[];
+    };
     [key: string]: any;
   };
 }
@@ -21,29 +26,33 @@ export const a2aAgentRoute = registerApiRoute('/a2a/agent/:agentId', {
 
       const { jsonrpc, id: requestId, params } = body;
 
-      if (jsonrpc !== '2.0' || !requestId) {
-        return c.json({
-          jsonrpc: '2.0',
-          id: requestId || null,
-          error: { code: -32600, message: 'Invalid Request' },
-        }, 400);
+      if (jsonrpc !== '2.0' || requestId == null) {
+        return c.json({ jsonrpc: '2.0', id: requestId || null, error: { code: -32600, message: 'Invalid Request' }}, 400);
       }
 
       const agent = mastra.getAgent(agentId);
       if (!agent) {
-        return c.json({
-          jsonrpc: '2.0',
-          id: requestId,
-          error: { code: -32602, message: `Agent '${agentId}' not found` },
-        }, 404);
+        return c.json({ jsonrpc: '2.0', id: requestId, error: { code: -32602, message: `Agent '${agentId}' not found` }}, 404);
       }
 
-      const { message } = params || {};
-      const userMessage = message || 'Hello';
-      
-      // Pass message as string instead of array
-      const response = await agent.generate(userMessage);
-      const agentText = response.text || `I'm here to listen and chat with you.`;
+      // Extract user message
+      let userMessage = "";
+      const rawMsg = params?.message;
+      if (typeof rawMsg === 'string') {
+        userMessage = rawMsg;
+      } else if (rawMsg && Array.isArray((rawMsg as any).parts)) {
+        const part0 = (rawMsg as any).parts[0];
+        userMessage = typeof part0.text === 'string' ? part0.text : "";
+      }
+
+      // If empty, fallback
+      if (!userMessage) {
+        userMessage = "Hello";
+      }
+
+      // Generate reply
+      const response = await agent.generate([{ role: 'user', content: userMessage }]);
+      const agentText = response.text || "I'm here to listen and chat with you.";
 
       return c.json({
         jsonrpc: '2.0',
@@ -54,20 +63,17 @@ export const a2aAgentRoute = registerApiRoute('/a2a/agent/:agentId', {
             {
               artifactId: randomUUID(),
               name: `${agentId}Response`,
-              parts: [{ kind: 'text', text: agentText }],
-            },
-          ],
-        },
+              parts: [{ kind: 'text', text: agentText }]
+            }
+          ]
+        }
       });
+
     } catch (error: any) {
       return c.json({
         jsonrpc: '2.0',
         id: null,
-        error: { 
-          code: -32603, 
-          message: 'Internal error', 
-          data: { details: error?.message || 'Unknown error' } 
-        },
+        error: { code: -32603, message: 'Internal error', data: { details: error?.message } }
       }, 500);
     }
   },
