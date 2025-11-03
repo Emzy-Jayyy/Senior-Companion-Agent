@@ -13,7 +13,7 @@ import { a2aAgentRoute } from "./routes/a2a-agent-route";
 
 export const mastra = new Mastra({
   // workflows: { weatherWorkflow },
-  agents: { companionAgent },
+  agents: { companionAgent, CompanionAgent: companionAgent },
   // scorers: {
   //   toolCallAppropriatenessScorer,
   //   completenessScorer,
