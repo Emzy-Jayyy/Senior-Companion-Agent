@@ -22,7 +22,7 @@ export const a2aAgentRoute = registerApiRoute('/a2a/agent/:agentId', {
             code: -32600,
             message: 'Invalid Request: jsonrpc must be "2.0" and id is required'
           }
-        }, 400);
+        }, 200);
       }
 
       const agent = mastra.getAgent(agentId);
